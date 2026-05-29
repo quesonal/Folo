@@ -57,27 +57,46 @@ export const getCliInstallCommand = () => `npx --yes ${CLI_NPX_PACKAGE_SPEC} --h
 export const getCliLoginCommand = () => `npx --yes ${CLI_NPX_PACKAGE_SPEC} login --token <token>`
 
 const runCliCommand = async (args: string[]) => {
-  await execFileAsync(getNpxCommand(), ["--yes", CLI_NPX_PACKAGE_SPEC, ...args], {
-    windowsHide: true,
-    timeout: 120_000,
-    maxBuffer: 1024 * 1024,
-    shell: process.platform === "win32",
-  })
-}
+    const cmd = getNpxCommand() // npx.cmd on Windows
+    if (process.platform === "win32") {
+      // Explicit cmd /c ensures shell exits after command completes
+      await execFileAsync(
+        "cmd.exe",
+        ["/c", cmd, "--yes", CLI_NPX_PACKAGE_SPEC, ...args],
+        {
+          windowsHide: true,
+          timeout: 120_000,
+          maxBuffer: 1024 * 1024,
+        },
+      )
+    } else {
+      await execFileAsync(cmd, ["--yes", CLI_NPX_PACKAGE_SPEC, ...args], {
+        timeout: 120_000,
+        maxBuffer: 1024 * 1024,
+      })
+    }
+  }
 
 export const isCliRunnerAvailable = async (): Promise<boolean> => {
-  try {
-    await execFileAsync(getNpxCommand(), ["--version"], {
-      windowsHide: true,
-      timeout: 10_000,
-      maxBuffer: 128 * 1024,
-      shell: process.platform === "win32",
-    })
-    return true
-  } catch {
-    return false
+    try {
+      const npxCmd = getNpxCommand()
+      if (process.platform === "win32") {
+        await execFileAsync("cmd.exe", ["/c", npxCmd, "--version"], {
+          windowsHide: true,
+          timeout: 10_000,
+          maxBuffer: 128 * 1024,
+        })
+      } else {
+        await execFileAsync(npxCmd, ["--version"], {
+          timeout: 10_000,
+          maxBuffer: 128 * 1024,
+        })
+      }
+      return true
+    } catch {
+      return false
+    }
   }
-}
 
 const clearCliConfigToken = async () => {
   const config = await readCliConfig()
