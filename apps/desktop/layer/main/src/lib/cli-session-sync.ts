@@ -61,6 +61,7 @@ const runCliCommand = async (args: string[]) => {
     windowsHide: true,
     timeout: 120_000,
     maxBuffer: 1024 * 1024,
+    shell: process.platform === "win32",
   })
 }
 
@@ -70,6 +71,7 @@ export const isCliRunnerAvailable = async (): Promise<boolean> => {
       windowsHide: true,
       timeout: 10_000,
       maxBuffer: 128 * 1024,
+      shell: process.platform === "win32",
     })
     return true
   } catch {
