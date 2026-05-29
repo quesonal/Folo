@@ -5,21 +5,24 @@ on:
   push:
     tags:
       - 'v*.*.*'
-  # 触发方式 2：在 GitHub Actions 面板手动点击 "Run workflow"
-  workflow_dispatch: 
+  # 触发方式 2：手动运行并输入 Tag
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "请输入 Release Tag 版本 (例如: v1.0.0)"
+        required: true
+        type: string
+        default: "v1.0.0-beta"
 
 env:
   NODE_OPTIONS: --max-old-space-size=8192
-  # 如果你的项目必须用到这些环境变量，请在 GitHub 仓库的 Settings -> Secrets 中自行配置
-  # VITE_WEB_URL: ${{ vars.VITE_WEB_URL }}
-  # VITE_API_URL: ${{ vars.VITE_API_URL }}
 
 jobs:
   build-and-release:
-    runs-on: windows-latest # 仅在 Windows 环境下运行
+    runs-on: windows-latest 
 
     permissions:
-      contents: write # 必须的权限：允许向 GitHub Releases 写入/上传文件
+      contents: write # 必须的权限：允许创建 Tag 和 Release
 
     steps:
       - name: 📦 Check out Git repository
@@ -55,15 +58,16 @@ jobs:
         working-directory: apps/desktop
         run: pnpm build:electron-forge
 
-      # --- 以下为 Release 环节 ---
+      # --- Release 环节 ---
       
       - name: 🚀 Create GitHub Release and Upload EXE
         uses: softprops/action-gh-release@v3
         with:
-          name: Release ${{ github.ref_name }} # Release 的标题
+          # 动态获取 Tag：如果是手动运行则用输入的 tag_name；如果是 Push 触发则用 ref_name
+          tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
+          name: Release ${{ github.event.inputs.tag_name || github.ref_name }}
           draft: false
           prerelease: false
-          # 自动寻找生成的 exe 和 yml(用于自动更新) 文件并上传
           files: |
             apps/desktop/out/make/**/*.exe
             apps/desktop/out/make/**/*.yml
